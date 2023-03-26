@@ -2,46 +2,18 @@
 <html>
   <head>
     <title>Camera Access Example</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@openalpr/openalpr/dist/openalpr.min.js"></script>
   </head>
   <body>
     <h1>Camera Access Example</h1>
     <video id="videoElement" autoplay></video>
-    <canvas id="canvas" style="display:none;"></canvas>
     <script>
       const video = document.getElementById("videoElement");
-      const canvas = document.getElementById("canvas");
-      const context = canvas.getContext("2d");
-      let alpr = null;
-
-      function loadAlpr() {
-        alpr = await openalpr({
-          runtimeConfig: {
-            licenseCountry: 'in',
-            licenseKey: 'YOUR_LICENSE_KEY',
-            recognizeVehicleCountry: 'in',
-          },
-        });
-      }
-
-      async function detectNumberPlate() {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = canvas.toDataURL('image/jpeg');
-        const result = await alpr.recognize(imageData);
-        console.log(result.results);
-        requestAnimationFrame(detectNumberPlate);
-      }
 
       if (navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices
           .getUserMedia({ video: { facingMode: "environment" } })
           .then(function (stream) {
             video.srcObject = stream;
-            loadAlpr();
-            requestAnimationFrame(detectNumberPlate);
           })
           .catch(function (err0r) {
             console.log("Something went wrong!", err0r);
