@@ -7,12 +7,14 @@
     <h1>Number Plate Detection</h1>
     <video id="videoElement" autoplay></video>
     <canvas id="canvasElement"></canvas>
+    <p id="numberPlate"></p>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.12.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@3.0.0"></script>
     <script>
       const video = document.getElementById("videoElement");
       const canvas = document.getElementById("canvasElement");
       const ctx = canvas.getContext("2d");
+      const numberPlate = document.getElementById("numberPlate");
 
       if (navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices
@@ -46,6 +48,7 @@
               ctx.strokeStyle = "red";
               ctx.lineWidth = 2;
               ctx.strokeRect(prediction.bbox[0], prediction.bbox[1], prediction.bbox[2], prediction.bbox[3]);
+              numberPlate.innerText = `Number Plate Detected: ${prediction.class}`;
             }
           }
         }, 1000);
