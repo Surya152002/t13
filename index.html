@@ -4,6 +4,7 @@
     <title>Number Plate Detection</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+    <script async src="https://docs.opencv.org/master/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
   </head>
   <body>
     <h1>Number Plate Detection</h1>
@@ -14,9 +15,9 @@
       const canvas = document.getElementById("canvasElement");
       const ctx = canvas.getContext("2d");
 
-      // Load the model
+      // Load the face detection models
       Promise.all([
-        faceapi.nets.tinyYolov3.loadFromUri("/models"),
+        faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
         faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
         faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
         faceapi.nets.faceExpressionNet.loadFromUri("/models"),
@@ -32,45 +33,29 @@
             console.log("Something went wrong!", err0r);
           });
 
-        video.addEventListener("play", () => {
-          const displaySize = { width: video.width, height: video.height };
+        video.addEventListener("loadedmetadata", () => {
+          const displaySize = { width: video.videoWidth, height: video.videoHeight };
           faceapi.matchDimensions(canvas, displaySize);
 
           setInterval(async () => {
-            const detections = await faceapi
-              .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
-              .withFaceLandmarks()
-              .withFaceExpressions();
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions();
 
-            const resizedDetections = faceapi.resizeResults(
-              detections,
-              displaySize
-            );
+            const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
             resizedDetections.forEach((detection) => {
-              const landmarks = detection.landmarks;
-              const nose = landmarks.getNose()[7];
-              const leftEye = landmarks.getLeftEye()[3];
-              const rightEye = landmarks.getRightEye()[0];
-              const mouth = landmarks.getMouth()[0];
-              const points = [nose, leftEye, rightEye, mouth];
-              const contour = new cv.Mat();
-              const pointsMat = cv.matFromArray(4, 1, cv.CV_32FC2, points);
-              const hull = new cv.Mat();
-              cv.convexHull(pointsMat, hull);
-              const contourVec = new cv.MatVector();
-              contourVec.push_back(hull);
-              const color = new cv.Scalar(255, 255, 255);
-              cv.drawContours(canvasMat, contourVec, 0, color, 2, cv.LINE_8);
-              pointsMat.delete();
-              hull.delete();
-              contourVec.delete();
-              contour.delete();
+              // Replace this code with the number plate detection code
+              // You will need to use a different library or model to do this
             });
           }, 100);
         });
+      }
+
+      function onOpenCvReady() {
+        // OpenCV is ready
+        // You can use the `cv` variable now
       }
     </script>
   </body>
