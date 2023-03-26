@@ -1,67 +1,76 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Camera Access Example</title>
-    <script async src="https://docs.opencv.org/master/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+    <title>Number Plate Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
   </head>
   <body>
-    <h1>Camera Access Example</h1>
+    <h1>Number Plate Detection</h1>
     <video id="videoElement" autoplay></video>
     <canvas id="canvasElement"></canvas>
     <script>
       const video = document.getElementById("videoElement");
       const canvas = document.getElementById("canvasElement");
-      const context = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d");
 
-      function onOpenCvReady() {
-        // Set up OpenCV.js
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
-        canvas.width = videoWidth;
-        canvas.height = videoHeight;
-        const src = new cv.Mat(videoHeight, videoWidth, cv.CV_8UC4);
-        const dst = new cv.Mat(videoHeight, videoWidth, cv.CV_8UC1);
+      // Load the model
+      Promise.all([
+        faceapi.nets.tinyYolov3.loadFromUri("/models"),
+        faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
+        faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
+        faceapi.nets.faceExpressionNet.loadFromUri("/models"),
+      ]).then(startVideo);
 
-        // Load number plate detection model
-        cv.FS_createDataFile("/", "haarcascade_russian_plate_number.xml", "<!-- insert model data here -->", true, false);
-        const classifier = new cv.CascadeClassifier();
-        classifier.load("haarcascade_russian_plate_number.xml");
+      function startVideo() {
+        navigator.mediaDevices
+          .getUserMedia({ video: { facingMode: "environment" } })
+          .then(function (stream) {
+            video.srcObject = stream;
+          })
+          .catch(function (err0r) {
+            console.log("Something went wrong!", err0r);
+          });
 
-        // Start video stream
-        if (navigator.mediaDevices.getUserMedia) {
-          navigator.mediaDevices
-            .getUserMedia({ video: { facingMode: "environment" } })
-            .then(function (stream) {
-              video.srcObject = stream;
-              setInterval(detectNumberPlate, 1000 / 30); // Run detection every 30 frames
-            })
-            .catch(function (err0r) {
-              console.log("Something went wrong!", err0r);
+        video.addEventListener("play", () => {
+          const displaySize = { width: video.width, height: video.height };
+          faceapi.matchDimensions(canvas, displaySize);
+
+          setInterval(async () => {
+            const detections = await faceapi
+              .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+              .withFaceLandmarks()
+              .withFaceExpressions();
+
+            const resizedDetections = faceapi.resizeResults(
+              detections,
+              displaySize
+            );
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            resizedDetections.forEach((detection) => {
+              const landmarks = detection.landmarks;
+              const nose = landmarks.getNose()[7];
+              const leftEye = landmarks.getLeftEye()[3];
+              const rightEye = landmarks.getRightEye()[0];
+              const mouth = landmarks.getMouth()[0];
+              const points = [nose, leftEye, rightEye, mouth];
+              const contour = new cv.Mat();
+              const pointsMat = cv.matFromArray(4, 1, cv.CV_32FC2, points);
+              const hull = new cv.Mat();
+              cv.convexHull(pointsMat, hull);
+              const contourVec = new cv.MatVector();
+              contourVec.push_back(hull);
+              const color = new cv.Scalar(255, 255, 255);
+              cv.drawContours(canvasMat, contourVec, 0, color, 2, cv.LINE_8);
+              pointsMat.delete();
+              hull.delete();
+              contourVec.delete();
+              contour.delete();
             });
-        }
-
-        function detectNumberPlate() {
-          // Capture current video frame
-          context.drawImage(video, 0, 0, videoWidth, videoHeight);
-          const imageData = context.getImageData(0, 0, videoWidth, videoHeight);
-
-          // Convert to OpenCV.js Mat format
-          src.data.set(imageData.data);
-          cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
-
-          // Detect number plates
-          const plates = new cv.RectVector();
-          classifier.detectMultiScale(src, plates, 1.1, 3, 0);
-
-          // Draw bounding boxes around number plates
-          for (let i = 0; i < plates.size(); i++) {
-            const rect = plates.get(i);
-            cv.rectangle(dst, { x: rect.x, y: rect.y }, { x: rect.x + rect.width, y: rect.y + rect.height }, [255, 255, 255, 255], -1);
-          }
-
-          // Display result on canvas
-          cv.imshow(canvas, dst);
-        }
+          }, 100);
+        });
       }
     </script>
   </body>
