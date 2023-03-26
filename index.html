@@ -10,6 +10,7 @@
     <p id="numberPlate"></p>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.12.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@3.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.2.2"></script>
     <script>
       const video = document.getElementById("videoElement");
       const canvas = document.getElementById("canvasElement");
@@ -28,12 +29,19 @@
       }
 
       video.addEventListener("loadeddata", async () => {
-        // Load the model
-        const model = await cocoSsd.load();
+        // Load the object detection model
+        const objectDetectionModel = await cocoSsd.load();
+
+        // Load the OCR model
+        const ocrModel = await Tesseract.create({
+          workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@2.2.2/dist/worker.min.js',
+          lang: 'eng',
+        });
 
         // Start detecting objects
         setInterval(async () => {
-          const predictions = await model.detect(video);
+          // Detect objects in the video frame
+          const predictions = await objectDetectionModel.detect(video);
           console.log(predictions);
 
           // Draw the detected objects on the canvas
@@ -44,15 +52,28 @@
           for (let i = 0; i < predictions.length; i++) {
             const prediction = predictions[i];
             if (prediction.class === "license plate") {
+              // Draw bounding box around the number plate
               ctx.fillText(prediction.class, prediction.bbox[0], prediction.bbox[1] - 5);
               ctx.strokeStyle = "red";
               ctx.lineWidth = 2;
               ctx.strokeRect(prediction.bbox[0], prediction.bbox[1], prediction.bbox[2], prediction.bbox[3]);
-              numberPlate.innerText = `Number Plate Detected: ${prediction.class}`;
+
+              // Extract the number plate region from the video frame
+              const numberPlateRegion = ctx.getImageData(
+                prediction.bbox[0],
+                prediction.bbox[1],
+                prediction.bbox[2],
+                prediction.bbox[3]
+              );
+
+              // Recognize characters in the number plate region using OCR
+              const { data: { text } } = await ocrModel.recognize(numberPlateRegion);
+              numberPlate.innerText = `Number Plate Detected: ${text}`;
             }
           }
         }, 1000);
       });
-    </script>
+    
+</script>
   </body>
 </html>
