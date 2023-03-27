@@ -1,80 +1,10 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Number Plate Detection</title>
-  </head>
-  <body>
-    <h1>Number Plate Detection</h1>
-    <video id="videoElement" autoplay></video>
-    <canvas id="canvasElement"></canvas>
-    <h1>Number Plate Detection</h1>
-    <p id="numberPlate"></p>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.12.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@3.0.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.2.2"></script>
-    <script>
-      const video = document.getElementById("videoElement");
-      const canvas = document.getElementById("canvasElement");
-      const ctx = canvas.getContext("2d");
-      const numberPlate = document.getElementById("numberPlate");
-
-      if (navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices
-          .getUserMedia({ video: { facingMode: "environment" } })
-          .then(function (stream) {
-            video.srcObject = stream;
-          })
-          .catch(function (err0r) {
-            console.log("Something went wrong!", err0r);
-          });
-      }
-
-      video.addEventListener("loadeddata", async () => {
-        // Load the object detection model
-        const objectDetectionModel = await cocoSsd.load();
-
-        // Load the OCR model
-        const ocrModel = await Tesseract.create({
-          workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@2.2.2/dist/worker.min.js',
-          lang: 'eng',
-        });
-
-        // Start detecting objects
-        setInterval(async () => {
-          // Detect objects in the video frame
-          const predictions = await objectDetectionModel.detect(video);
-          console.log(predictions);
-
-          // Draw the detected objects on the canvas
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          ctx.font = "16px Arial";
-          ctx.fillStyle = "red";
-          for (let i = 0; i < predictions.length; i++) {
-            const prediction = predictions[i];
-            if (prediction.class === "license plate") {
-              // Draw bounding box around the number plate
-              ctx.fillText(prediction.class, prediction.bbox[0], prediction.bbox[1] - 5);
-              ctx.strokeStyle = "red";
-              ctx.lineWidth = 2;
-              ctx.strokeRect(prediction.bbox[0], prediction.bbox[1], prediction.bbox[2], prediction.bbox[3]);
-
-              // Extract the number plate region from the video frame
-              const numberPlateRegion = ctx.getImageData(
-                prediction.bbox[0],
-                prediction.bbox[1],
-                prediction.bbox[2],
-                prediction.bbox[3]
-              );
-
-              // Recognize characters in the number plate region using OCR
-              const { data: { text } } = await ocrModel.recognize(numberPlateRegion);
-              numberPlate.innerText = `Number Plate Detected: ${text}`;
-            }
-          }
-        }, 1000);
-      });
-    
-</script>
-  </body>
+<head>
+	<title>Car Number Plate Detection</title>
+</head>
+<body>
+	<h1>Car Number Plate Detection</h1>
+	<img src="{{ url_for('video_feed') }}">
+</body>
 </html>
